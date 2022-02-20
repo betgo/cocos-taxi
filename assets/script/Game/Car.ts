@@ -20,6 +20,9 @@ const tempVec = new Vec3()
 @ccclass('Car')
 export class Car extends Component {
 
+    @property
+    maxSpeed = 0.2
+
     private _currRoadPoint: RoadPoint = null
     private _pointA = new Vec3();
     private _pointB = new Vec3();
@@ -30,10 +33,19 @@ export class Car extends Component {
     private _targetRotation = 0;
     private _centerPoint = new Vec3();
     private _rotaMeasure = 0;
+    private _acceleration = 0.2;
 
     public update(dt: number) {
-        if (this._isMoving && this._currRoadPoint) {
 
+        if (this._isMoving && this._currRoadPoint) {
+            this._currSpeed += this._acceleration * dt;
+            if (this._currSpeed > this.maxSpeed) {
+                this._currSpeed = this.maxSpeed
+            }
+            if (this._currSpeed <= -0.001) {
+                this._isMoving = false
+                return;
+            }
             this._offset.set(this.node.worldPosition)
             switch (this._currRoadPoint.moveType) {
                 case ROAD_MOVE_TYPE.曲线行走:
@@ -47,6 +59,7 @@ export class Car extends Component {
                     tempVec.set(0, target, 0);
                     this.node.eulerAngles = tempVec;
 
+                    // 绕 Y 轴旋转向量指定弧度
                     const sin = Math.sin(nextStation * Math.PI / 180);
                     const cos = Math.cos(nextStation * Math.PI / 180)
                     const xLength = this._pointA.x - this._centerPoint.x
@@ -56,8 +69,7 @@ export class Car extends Component {
                     this._offset.set(xpos, 0, zpos)
                     break;
                 case ROAD_MOVE_TYPE.直线行走:
-                    console.log('直线行走');
-                    
+
                     const z = this._pointB.z - this._pointA.z
                     if (z !== 0) {
                         if (z > 0) {
@@ -91,7 +103,6 @@ export class Car extends Component {
             }
             this.node.setWorldPosition(this._offset)
             Vec3.subtract(tempVec, this._pointB, this._offset)
-            console.log('tempVec.length()', tempVec.length());
 
             if (tempVec.length() <= 0.1) {
                 this._arriveStation()
@@ -133,15 +144,16 @@ export class Car extends Component {
     startRunning() {
         if (this._currRoadPoint) {
             this._isMoving = true;
+            this._currSpeed = 0;
+            this._acceleration = 0.2;
         }
     }
     stopRunning() {
-        this._isMoving = false;
+        this._acceleration = -0.3;
     }
 
     private _arriveStation() {
         console.log('------到站---------');
-        console.log('this._currRoadPoint', this._currRoadPoint);
 
         this._pointA.set(this._pointB);
         if (this._currRoadPoint.next) {
